@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Search</title>
+    <!-- Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font --><link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa; /* Light gray background for contrast */
+            /* A body-ról levettük a paddinget, hogy a fejléc teljes szélességű lehessen */
+        }
+        /* Style for search buttons */
+        .search-button {
+            background-color: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            color: #3c4043;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 11px 4px;
+            padding: 0 16px;
+            height: 36px;
+            min-width: 54px;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s ease-in-out;
+        }
+        .search-button:hover {
+            border-color: #c6c6c6;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+        /* Main container transition */
+        #main-container {
+            transition: all 0.3s ease-in-out;
+            /* Megkapta a body-ról levett paddinget */
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        /* State when search results are active */
+        body.search-active #main-container {
+            justify-content: flex-start;
+            padding-top: 3vh; /* Smaller top padding after search */
+        }
+        body.search-active #logo {
+            transform: scale(0.70); /* Smaller logo after search */
+            margin-bottom: 1rem;
+        }
+        
+        /* Solana Gradient Text */
+        .solana-gradient-text {
+            background-image: linear-gradient(to right, #00C6FF, #FF00E0); /* Solana colors */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent; /* Fallback for browsers that don't support background-clip */
+        }
+        
+        /* Solana Gradient Button */
+        .solana-gradient-btn {
+            @apply bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition-all duration-300;
+        }
+        .solana-gradient-btn:hover {
+            @apply shadow-lg;
+            filter: brightness(1.1);
+        }
+
+        /* Gradient Border for the body */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 1000; /* Legyen a tetején, de a tartalom felett */
+            background: linear-gradient(to right, #00C6FF, #FF00E0);
+            padding: 3px; /* Thickness of the border */
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            /* border-radius: 12px; */ /* Kivettem a radiuszt, hogy teljes oldalas legyen */
+        }
+    </style>
+</head>
+<body class="text-gray-900">
+
+    <!-- ÚJ FEJLÉC -->
+    <header class="bg-white shadow-md p-4 sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center max-w-7xl">
+            <!-- Bal oldal: Logó placeholder -->
+            <div class="text-xl font-bold solana-gradient-text">
+                LOGO
+            </div>
+            
+            <!-- Jobb oldal: CA Box és X Logo -->
+            <div class="flex items-center space-x-4">
+                <!-- CA Box (kattintható) -->
+                <div id="ca-box" class="flex items-center bg-gray-100 rounded-lg p-2 px-3 text-sm font-mono cursor-pointer transition-colors hover:bg-gray-200" title="Click to copy address">
+                    <span id="ca-text" class="text-gray-500 mr-2">ca:</span>
+                    <span id="contract-address" class="text-gray-800 break-all">YourContractAddressHere...</span>
+                </div>
+                <!-- X.com Logo (placeholder link) -->
+                <a href="#" id="x-com-link" target="_blank" rel="noopener noreferrer" class="text-gray-700 hover:text-black transition-colors">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865l8.875 11.633Z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container --><div id="main-container" class="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4"> <!-- 80px a fejléc magassága kb -->
+
+        <!-- Logo --><div id="logo" class="mb-6 transition-all duration-300">
+            <span class="text-7xl md:text-8xl font-bold solana-gradient-text">
+                Solana
+            </span>
+        </div>
+
+        <!-- Search Box --><div class="w-full max-w-xl">
+            <div class="flex items-center bg-white border border-gray-200 rounded-full shadow-md hover:shadow-lg transition-shadow duration-200 px-5 py-3">
+                <!-- Search Icon --><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                
+                <input type="text" id="search-input" class="flex-grow px-4 text-base text-gray-800 placeholder-gray-500 focus:outline-none bg-transparent" placeholder="Ask about crypto or enter a Solana address...">
+                
+                <!-- Mic Icon --><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 ml-3 cursor-pointer hover:text-gray-600">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                </svg>
+                
+                <!-- Camera Icon --><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 ml-3 cursor-pointer hover:text-gray-600">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                    <circle cx="12" cy="13" r="3"></circle>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Search Buttons --><div class="flex justify-center mt-7">
+            <button id="search-button" class="search-button">Solana Search</button>
+            <button id="chart-button" class="search-button">I'm Feeling Lucky</button>
+        </div>
+
+        <!-- Results Container --><div id="results-container" class="w-full max-w-4xl mt-8">
+            <!-- Results will be loaded here --></div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const chartButton = document.getElementById('chart-button');
+        const resultsContainer = document.getElementById('results-container');
+        const mainContainer = document.getElementById('main-container');
+        const body = document.body;
+        const caBox = document.getElementById('ca-box');
+        const caText = document.getElementById('ca-text');
+        const contractAddressSpan = document.getElementById('contract-address');
+
+        // System prompt for Gemini API (MÓDOSÍTVA: Általánosabb, de crypto-fókuszú)
+        const SYSTEM_PROMPT = "You are a helpful assistant. You answer all questions factually and cite your sources. If the question is about cryptocurrency, provide detailed answers. Respond in English.";
+        
+        // Basic Solana Address Regex
+        const SOLANA_ADDRESS_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+        
+        // HELYETTE: Ticker-leképezés a kereséshez (TICKER_MAP)
+        const TICKER_MAP = {
+            'SOLANA': 'SOL',
+            'SOL': 'SOL',
+            'BITCOIN': 'BTC',
+            'BTC': 'BTC',
+            'ETHEREUM': 'ETH',
+            'ETH': 'ETH',
+            'BINANCE COIN': 'BNB',
+            'BNB': 'BNB',
+            'RIPPLE': 'XRP',
+            'XRP': 'XRP',
+            'CARDANO': 'ADA',
+            'ADA': 'ADA',
+            'DOGECOIN': 'DOGE',
+            'DOGE': 'DOGE',
+            'AVALANCHE': 'AVAX',
+            'AVAX': 'AVAX',
+            'POLKADOT': 'DOT',
+            'DOT': 'DOT',
+            'CHAINLINK': 'LINK',
+            'LINK': 'LINK',
+            'TRON': 'TRX',
+            'TRX': 'TRX',
+            'SHIBA INU': 'SHIB',
+            'SHIB': 'SHIB'
+        };
+
+        /**
+         * ÚJ: Segédfüggvény a ticker megtalálásához a query-ben
+         * @param {string} query 
+         * @returns {string|null} A megtalált ticker (pl. "SOL") vagy null
+         */
+        function findTickerInQuery(query) {
+            const upperQuery = query.toUpperCase();
+            
+            // Fontossági sorrendben (hosszabb nevek először, pl. "SOLANA" előbb, mint "SOL")
+            const keywords = Object.keys(TICKER_MAP).sort((a, b) => b.length - a.length);
+
+            for (const keyword of keywords) {
+                // Szóhatár (\b) ellenőrzés, hogy a "SOL" ne illeszkedjen a "SOLANA"-ra, ha külön keresnénk
+                const regex = new RegExp(`\\b${keyword}\\b`);
+                if (regex.test(upperQuery)) {
+                    return TICKER_MAP[keyword];
+                }
+            }
+            
+            // Ha nincs pontos szóhatár egyezés (pl. "solanaprice"), 
+            // próbáljunk egy egyszerű 'includes'-t
+            for (const keyword of keywords) {
+                 if (upperQuery.includes(keyword)) {
+                    return TICKER_MAP[keyword];
+                }
+            }
+
+            return null;
+        }
+        
+        // --- API Call Logic ---
+
+        /**
+         * General Gemini API caller
+         * @param {string} userQuery The user's query
+         * @param {string} [systemPrompt=null] Optional system prompt
+         * @param {boolean} [useGrounding=true] Whether to use Google Search grounding
+         */
+        async function callGeminiAPI(userQuery, systemPrompt = null, useGrounding = true) {
+            showLoading();
+            const apiKey = ""; // Injected by Canvas
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                tools: useGrounding ? [{ "google_search": {} }] : [],
+            };
+
+            if (systemPrompt) {
+                payload.systemInstruction = {
+                    parts: [{ text: systemPrompt }]
+                };
+            }
+
+            let responseText = "";
+            let sources = [];
+            let retries = 0;
+            const maxRetries = 5;
+
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status} ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        responseText = candidate.content.parts[0].text;
+                        
+                        // Extract grounding metadata
+                        const groundingMetadata = candidate.groundingMetadata;
+                        if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                            sources = groundingMetadata.groundingAttributions
+                                .map(attr => ({
+                                    uri: attr.web?.uri,
+                                    title: attr.web?.title,
+                                }))
+                                .filter(source => source.uri && source.title);
+                        }
+                        
+                        return { text: responseText, sources: sources };
+                    } else {
+                        // Handle cases of safety blocks or empty responses
+                        if (candidate && candidate.finishReason === 'SAFETY') {
+                             throw new Error("The response was blocked due to safety settings.");
+                        }
+                        throw new Error("No valid content received from the model.");
+                    }
+                } catch (error) {
+                    console.error(`Error calling Gemini API (Attempt ${retries + 1}):`, error);
+                    retries++;
+                    if (retries >= maxRetries) {
+                        displayError(`Failed to get a response after ${maxRetries} attempts. Please try again later. Error: ${error.message}`);
+                        return { text: null, sources: [] };
+                    }
+                    // Exponential backoff
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
+                }
+            }
+            return { text: null, sources: [] }; // Should be unreachable
+        }
+        
+        // --- Main Functions ---
+        
+        /**
+         * Handles the search logic (MÓDOSÍTVA: TradingView logikával)
+         */
+        async function handleSearch() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+            
+            // Activate 'search-active' state
+            body.classList.add('search-active');
+            
+            // MÓDOSÍTÁS: Ticker keresése a query-ben
+            const matchedTicker = findTickerInQuery(query);
+
+            // 1. Ellenőrzés: Főbb coin ticker (MÓDOSÍTVA)
+            if (matchedTicker) {
+                await showTradingViewChart(matchedTicker);
+            // 2. Ellenőrzés: Solana cím?
+            } else if (SOLANA_ADDRESS_REGEX.test(query)) {
+                await showTokenInfo(query);
+            // 3. Általános keresés
+            } else {
+                await fetchGeminiCryptoInfo(query);
+            }
+        }
+        
+        /**
+         * ÚJ FUNKCIÓ: TradingView Chart megjelenítése
+         * @param {string} ticker A coin ticker (pl. "BTC")
+         */
+        async function showTradingViewChart(ticker) {
+            showLoading(); // Töltésjelző mutatása
+
+            // 1. AI Leírás kérése
+            const prompt = `Provide a brief, factual description for the cryptocurrency ${ticker}. Focus on its primary use case. Respond in English.`;
+            const { text: description, sources } = await callGeminiAPI(prompt, SYSTEM_PROMPT, true);
+
+            // 2. HTML Tartalom összeállítása
+            const chartContainerHtml = `
+                <div class="tradingview-widget-container rounded-lg overflow-hidden shadow-lg" style="height: 610px; width: 100%;">
+                    <div id="tradingview_widget_${ticker}" style="height: 100%; width: 100%;"></div>
+                    <div class="tradingview-widget-copyright">
+                        <a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">
+                            <span class="blue-text">Track all markets on TradingView</span>
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            let descriptionHtml = "";
+            if (description) {
+                let sourcesHtml = "";
+                if (sources.length > 0) {
+                    sourcesHtml = '<h4 class="text-sm font-semibold mt-4 mb-1">Source(s):</h4><ul class="list-disc list-inside text-xs">';
+                    sources.forEach(source => {
+                        sourcesHtml += `<li><a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${source.title}</a></li>`;
+                    });
+                    sourcesHtml += '</ul>';
+                }
+
+                descriptionHtml = `
+                    <div class="mt-6 p-4 bg-white rounded-lg border shadow-sm">
+                        <h3 class="text-xl font-semibold mb-2 solana-gradient-text">AI Description</h3>
+                        <p class="text-gray-700">${simpleMarkdownToHtml(description)}</p>
+                        ${sourcesHtml}
+                    </div>
+                `;
+            }
+
+            // 3. HTML Beillesztése
+            resultsContainer.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl p-4 md:p-8 animate-fade-in">
+                    ${chartContainerHtml}
+                    ${descriptionHtml}
+                </div>
+            `;
+
+            // 4. TradingView Scriptek betöltése és futtatása
+            // Először eltávolítjuk a régi scripteket, ha vannak
+            document.querySelectorAll('script[src="https://s3.tradingview.com/tv.js"]').forEach(s => s.remove());
+            
+            const tvScript = document.createElement('script');
+            tvScript.src = "https://s3.tradingview.com/tv.js";
+            tvScript.async = true;
+            tvScript.onload = () => {
+                try {
+                    new TradingView.widget({
+                        "width": "100%",
+                        "height": 610,
+                        "symbol": `BINANCE:${ticker}USDT`, // Dinamikus szimbólum
+                        "interval": "D",
+                        "timezone": "Etc/UTC",
+                        "theme": "dark",
+                        "style": "1",
+                        "locale": "en",
+                        "enable_publishing": false,
+                        "allow_symbol_change": true,
+                        "container_id": `tradingview_widget_${ticker}`
+                    });
+                } catch (e) {
+                    console.error("TradingView Widget Error:", e);
+                    document.getElementById(`tradingview_widget_${ticker}`).innerText = "Failed to load TradingView widget.";
+                }
+            };
+            document.body.appendChild(tvScript);
+        }
+
+        /**
+         * Displays token info (chart, link, description)
+         * @param {string} contractAddress The Solana contract address
+         */
+        async function showTokenInfo(contractAddress) {
+            showLoading();
+            
+            // 1. DexScreener Chart Embed
+            const chartHtml = `
+                <div class="border rounded-lg overflow-hidden shadow-lg">
+                    <iframe 
+                        src="https://dexscreener.com/solana/${contractAddress}?embed=1&theme=dark&info=0&trades=0"
+                        class="w-full h-[400px] md:h-[600px]"
+                        frameborder="0"
+                        allowfullscreen
+                    ></iframe>
+                </div>
+            `;
+            
+            // 2. DexScreener Link
+            const linkHtml = `
+                <div class="mt-6 text-center">
+                    <a 
+                        href="https://dexscreener.com/solana/${contractAddress}" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        class="solana-gradient-btn"
+                    >
+                        Open on DexScreener
+                    </a>
+                </div>
+            `;
+            
+            // 3. Gemini Description (WITH GROUNDING)
+            const prompt = `Search for public information about this Solana token address: ${contractAddress}. Provide a brief, factual description (1-2 sentences) of the token, including its name if found. Do not give financial advice and do not speculate on price. Respond in English.`;
+            
+            const { text: description, sources } = await callGeminiAPI(prompt, null, true); 
+            
+            let descriptionHtml = "";
+            if (description) {
+                let sourcesHtml = "";
+                if (sources.length > 0) {
+                    sourcesHtml = '<h4 class="text-sm font-semibold mt-4 mb-1">Source(s):</h4><ul class="list-disc list-inside text-xs">';
+                    sources.forEach(source => {
+                        sourcesHtml += `<li><a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${source.title}</a></li>`;
+                    });
+                    sourcesHtml += '</ul>';
+                }
+
+                descriptionHtml = `
+                    <div class="mt-6 p-4 bg-white rounded-lg border shadow-sm">
+                        <h3 class="text-xl font-semibold mb-2 solana-gradient-text">AI Description</h3>
+                        <p class="text-gray-700">${simpleMarkdownToHtml(description)}</p>
+                        ${sourcesHtml}
+                    </div>
+                `;
+            } else {
+                descriptionHtml = `
+                    <div class="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-yellow-800">
+                        <p>Could not automatically generate a description for this token.</p>
+                    </div>
+                `;
+            }
+
+            // Display results in a clean card
+            resultsContainer.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl p-4 md:p-8 animate-fade-in">
+                    ${chartHtml}
+                    ${linkHtml}
+                    ${descriptionHtml}
+                </div>
+            `;
+        }
+        
+        /**
+         * Fetches general crypto info with Gemini
+         * @param {string} query The user's query
+         */
+        async function fetchGeminiCryptoInfo(query) {
+            // Itt már a `showLoading` a callGeminiAPI-ban hívódik meg
+            const { text, sources } = await callGeminiAPI(query, SYSTEM_PROMPT, true);
+            
+            if (text) {
+                let sourcesHtml = "";
+                if (sources.length > 0) {
+                    sourcesHtml = `<h4 class="text-lg font-semibold mt-6 mb-2 solana-gradient-text">Sources:</h4><ul class="list-disc list-inside text-sm text-gray-700">`;
+                    sources.forEach(source => {
+                        sourcesHtml += `<li><a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${source.title}</a></li>`;
+                    });
+                    sourcesHtml += '</ul>';
+                }
+                
+                resultsContainer.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-2xl animate-fade-in">
+                        <div class="prose max-w-none text-gray-800">
+                            ${simpleMarkdownToHtml(text)}
+                        </div>
+                        ${sourcesHtml}
+                    </div>
+                `;
+            }
+            // Error is handled by callGeminiAPI
+        }
+        
+        
+        // --- Helper Functions ---
+
+        function showLoading() {
+            body.classList.add('search-active');
+            resultsContainer.innerHTML = `
+                <div class="flex justify-center items-center p-10">
+                    <svg class="animate-spin h-10 w-10 text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            `;
+        }
+
+        function displayError(message) {
+            resultsContainer.innerHTML = `
+                <div class="bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded-lg relative shadow" role="alert">
+                    <strong class="font-bold">Info: </strong>
+                    <span class="block sm:inline">${message}</span>
+                </div>
+            `;
+        }
+
+        /**
+         * Very simple Markdown -> HTML converter
+         */
+        function simpleMarkdownToHtml(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')       // Italic
+                .replace(/`(.*?)`/g, '<code class="bg-gray-200 px-1 rounded text-sm">$1</code>') // Code
+                .replace(/\n/g, '<br>'); // Newlines
+        }
+        
+        /**
+         * ÚJ FUNKCIÓ: Vágólapra másolás
+         */
+        function copyToClipboard(text) {
+            // A 'navigator.clipboard' megbízhatatlanabb iFrame-ben
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed'; // Kivezetés a képernyőről
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                // Visszajelzés
+                caText.innerText = 'Copied!';
+                setTimeout(() => { caText.innerText = 'ca:'; }, 1500);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                caText.innerText = 'Error!';
+                setTimeout(() => { caText.innerText = 'ca:'; }, 1500);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // --- Event Listeners ---
+        
+        searchButton.addEventListener('click', handleSearch);
+        
+        chartButton.addEventListener('click', () => {
+            // Az "I'm Feeling Lucky" gomb ugyanazt csinálja, mint a sima keresés
+            handleSearch();
+        });
+        
+        searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                handleSearch();
+            }
+        });
+        
+        // ÚJ Event Listener a CA Box-hoz
+        caBox.addEventListener('click', () => {
+            const address = contractAddressSpan.innerText;
+            if (address && address !== "YourContractAddressHere...") {
+                copyToClipboard(address);
+            } else {
+                // Opcionális: Visszajelzés, ha nincs cím
+                caText.innerText = 'No CA!';
+                setTimeout(() => { caText.innerText = 'ca:'; }, 1500);
+            }
+        });
+
+        // Animation styles
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fade-in {
+                animation: fadeIn 0.5s ease-out forwards;
+            }
+            /* Basic prose styling for Gemini responses */
+            .prose br {
+                content: "";
+                display: block;
+                margin-bottom: 0.5rem;
+            }
+            .prose strong { font-weight: 600; }
+            .prose em { font-style: italic; }
+        `;
+        document.head.appendChild(style);
+
+    </script>
+
+</body>
+</html>
+
+
