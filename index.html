@@ -94,6 +94,25 @@
 </head>
 <body class="text-gray-900">
 
+    <!-- ÚJ: Welcome Modal -->
+    <div id="welcome-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 md:p-8 max-w-lg w-full m-4 animate-fade-in">
+            <h2 class="text-3xl font-bold mb-4 solana-gradient-text">Welcome to Solana Search</h2>
+            <p class="text-gray-700 mb-4">
+                This is a next-generation, super-intelligent search engine. You can ask anything, from complex topics to everyday questions.
+            </p>
+            <p class="text-gray-700 mb-6">
+                While it's a powerful tool for all inquiries, it's <strong>especially optimized for the crypto world</strong>. Get real-time data, token descriptions, and news.
+            </p>
+            <p class="text-gray-900 font-semibold text-center text-lg mb-6">
+                Solana is the next Google.
+            </p>
+            <button id="close-modal-btn" class="w-full solana-gradient-btn">
+                Got it, let's search!
+            </button>
+        </div>
+    </div>
+
     <!-- ÚJ FEJLÉC -->
     <header class="bg-white shadow-md p-4 sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center max-w-7xl">
@@ -136,16 +155,13 @@
                 
                 <input type="text" id="search-input" class="flex-grow px-4 text-base text-gray-800 placeholder-gray-500 focus:outline-none bg-transparent" placeholder="Ask about crypto or enter a Solana address...">
                 
-                <!-- Mic Icon --><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 ml-3 cursor-pointer hover:text-gray-600">
+                <!-- Mic Icon --><svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 ml-3 cursor-pointer hover:text-gray-600 transition-colors">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                     <line x1="12" y1="19" x2="12" y2="23"></line>
                 </svg>
                 
-                <!-- Camera Icon --><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 ml-3 cursor-pointer hover:text-gray-600">
-                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
-                    <circle cx="12" cy="13" r="3"></circle>
-                </svg>
+                <!-- Camera Icon (ELTÁVOLÍTVA) -->
             </div>
         </div>
 
@@ -169,9 +185,13 @@
         const caBox = document.getElementById('ca-box');
         const caText = document.getElementById('ca-text');
         const contractAddressSpan = document.getElementById('contract-address');
+        const micIcon = document.getElementById('mic-icon'); // ÚJ: Mikrofon ikon
+        // ÚJ: Modal elemek
+        const welcomeModal = document.getElementById('welcome-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
 
         // System prompt for Gemini API (MÓDOSÍTVA: Általánosabb, de crypto-fókuszú)
-        const SYSTEM_PROMPT = "You are a helpful assistant. You answer all questions factually and cite your sources. If the question is about cryptocurrency, provide detailed answers. Respond in English.";
+        const SYSTEM_PROMPT = "You are 'Solana Search', a super-intelligent search assistant. You answer all questions factually and cite your sources. Your specialty is cryptocurrency and blockchain, providing detailed, expert-level answers on these topics. Respond in English.";
         
         // Basic Solana Address Regex
         const SOLANA_ADDRESS_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -242,7 +262,7 @@
          * @param {string} [systemPrompt=null] Optional system prompt
          * @param {boolean} [useGrounding=true] Whether to use Google Search grounding
          */
-        async function callGeminiAPI(userQuery, systemPrompt = null, useGrounding = true) {
+        async function callSearchAPI(userQuery, systemPrompt = null, useGrounding = true) {
             showLoading();
             const apiKey = "AIzaSyDSSIhexQb5jhupeo0xsNJaMvl5k0hNQuA"; // User provided API Key
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
@@ -301,7 +321,7 @@
                         throw new Error("No valid content received from the model.");
                     }
                 } catch (error) {
-                    console.error(`Error calling Gemini API (Attempt ${retries + 1}):`, error);
+                    console.error(`Error calling Search API (Attempt ${retries + 1}):`, error);
                     retries++;
                     if (retries >= maxRetries) {
                         displayError(`Failed to get a response after ${maxRetries} attempts. Please try again later. Error: ${error.message}`);
@@ -337,7 +357,7 @@
                 await showTokenInfo(query);
             // 3. Általános keresés
             } else {
-                await fetchGeminiCryptoInfo(query);
+                await fetchGeneralInfo(query);
             }
         }
         
@@ -350,7 +370,7 @@
 
             // 1. AI Leírás kérése
             const prompt = `Provide a brief, factual description for the cryptocurrency ${ticker}. Focus on its primary use case. Respond in English.`;
-            const { text: description, sources } = await callGeminiAPI(prompt, SYSTEM_PROMPT, true);
+            const { text: description, sources } = await callSearchAPI(prompt, SYSTEM_PROMPT, true);
 
             // 2. HTML Tartalom összeállítása
             const chartContainerHtml = `
@@ -377,7 +397,7 @@
 
                 descriptionHtml = `
                     <div class="mt-6 p-4 bg-white rounded-lg border shadow-sm">
-                        <h3 class="text-xl font-semibold mb-2 solana-gradient-text">AI Description</h3>
+                        <h3 class="text-xl font-semibold mb-2 solana-gradient-text">Smart Analysis</h3>
                         <p class="text-gray-700">${simpleMarkdownToHtml(description)}</p>
                         ${sourcesHtml}
                     </div>
@@ -458,7 +478,7 @@
             // 3. Gemini Description (WITH GROUNDING)
             const prompt = `Search for public information about this Solana token address: ${contractAddress}. Provide a brief, factual description (1-2 sentences) of the token, including its name if found. Do not give financial advice and do not speculate on price. Respond in English.`;
             
-            const { text: description, sources } = await callGeminiAPI(prompt, null, true); 
+            const { text: description, sources } = await callSearchAPI(prompt, null, true); 
             
             let descriptionHtml = "";
             if (description) {
@@ -473,7 +493,7 @@
 
                 descriptionHtml = `
                     <div class="mt-6 p-4 bg-white rounded-lg border shadow-sm">
-                        <h3 class="text-xl font-semibold mb-2 solana-gradient-text">AI Description</h3>
+                        <h3 class="text-xl font-semibold mb-2 solana-gradient-text">Smart Analysis</h3>
                         <p class="text-gray-700">${simpleMarkdownToHtml(description)}</p>
                         ${sourcesHtml}
                     </div>
@@ -497,12 +517,12 @@
         }
         
         /**
-         * Fetches general crypto info with Gemini
+         * Fetches general crypto info
          * @param {string} query The user's query
          */
-        async function fetchGeminiCryptoInfo(query) {
-            // Itt már a `showLoading` a callGeminiAPI-ban hívódik meg
-            const { text, sources } = await callGeminiAPI(query, SYSTEM_PROMPT, true);
+        async function fetchGeneralInfo(query) {
+            // Itt már a `showLoading` a callSearchAPI-ban hívódik meg
+            const { text, sources } = await callSearchAPI(query, SYSTEM_PROMPT, true);
             
             if (text) {
                 let sourcesHtml = "";
@@ -585,6 +605,14 @@
             document.body.removeChild(textArea);
         }
 
+        /**
+         * ÚJ FUNKCIÓ: Modal bezárása
+         */
+        function closeModal() {
+            welcomeModal.classList.add('hidden');
+            localStorage.setItem('welcomeModalSeen', 'true');
+        }
+
         // --- Event Listeners ---
         
         searchButton.addEventListener('click', handleSearch);
@@ -609,6 +637,69 @@
                 // Opcionális: Visszajelzés, ha nincs cím
                 caText.innerText = 'No CA!';
                 setTimeout(() => { caText.innerText = 'ca:'; }, 1500);
+            }
+        });
+
+        // ÚJ: Speech Recognition (Hangfelismerés)
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US'; // Az oldal nyelvének megfelelően angol
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            micIcon.addEventListener('click', () => {
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.error("Speech recognition already active.", e);
+                }
+            });
+
+            recognition.onstart = () => {
+                micIcon.classList.remove('text-gray-400');
+                micIcon.classList.add('text-red-500'); // Vizuális visszajelzés
+            };
+
+            recognition.onend = () => {
+                micIcon.classList.add('text-gray-400');
+                micIcon.classList.remove('text-red-500');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript;
+                // Automatikus keresés a hangfelismerés után
+                handleSearch();
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                displayError(`Speech recognition error: ${event.error}. Please ensure you've given microphone permission.`);
+            };
+
+        } else {
+            // Ha a böngésző nem támogatja
+            micIcon.addEventListener('click', () => {
+                displayError('Sorry, your browser does not support speech recognition.');
+            });
+            micIcon.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+
+        // ÚJ: Modal Listeners
+        closeModalBtn.addEventListener('click', closeModal);
+        welcomeModal.addEventListener('click', (e) => {
+            // Bezárás, ha a háttérre kattint
+            if (e.target === welcomeModal) {
+                closeModal();
+            }
+        });
+
+        // ÚJ: Modal megjelenítése az első látogatáskor
+        window.addEventListener('load', () => {
+            if (!localStorage.getItem('welcomeModalSeen')) {
+                welcomeModal.classList.remove('hidden');
             }
         });
 
@@ -637,6 +728,9 @@
 
 </body>
 </html>
+
+
+
 
 
 
