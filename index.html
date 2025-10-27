@@ -16,6 +16,9 @@
             font-family: 'Roboto', sans-serif;
             background-color: #f8f9fa; /* Light gray background for contrast */
             /* A body-ról levettük a paddinget, hogy a fejléc teljes szélességű lehessen */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         /* Style for search buttons */
         .search-button {
@@ -44,6 +47,7 @@
             /* Megkapta a body-ról levett paddinget */
             padding-left: 1rem;
             padding-right: 1rem;
+            flex-grow: 1; /* Új: biztosítja, hogy a tartalom kitöltse a helyet */
         }
         /* State when search results are active */
         body.search-active #main-container {
@@ -175,6 +179,11 @@
         <!-- Results Container --><div id="results-container" class="w-full max-w-4xl mt-8">
             <!-- Results will be loaded here --></div>
     </div>
+
+    <!-- ÚJ LÁBLÉC -->
+    <footer class="w-full text-center p-6 text-gray-500 text-sm mt-auto">
+        $solsearch all rights reserved
+    </footer>
 
     <script>
         // DOM Elements
@@ -615,7 +624,7 @@
             localStorage.setItem('welcomeModalSeen', 'true');
         }
 
-        // --- Event Listeners ---
+// --- Event Listeners ---
         
         searchButton.addEventListener('click', handleSearch);
         
@@ -730,15 +739,4 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
 
